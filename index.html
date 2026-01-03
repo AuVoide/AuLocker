@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Aurora Locker | Ultimate</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg: #000000;
+            --glass: rgba(20, 20, 30, 0.65);
+            --border: rgba(255, 255, 255, 0.08);
+            --primary: #f43f5e;
+            --accent: #a855f7;
+            --safe: #10b981;
+            --text: #ffffff;
+            --font: 'Outfit', sans-serif;
+            --mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: var(--font);
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* DYNAMIC CANVAS BG */
+        #cosmos {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            background: radial-gradient(circle at 50% 120%, #1e1b4b, #000);
+        }
+
+        /* MAIN CARD */
+        .vault-card {
+            width: 90%;
+            max-width: 480px;
+            background: rgba(10, 10, 15, 0.6);
+            backdrop-filter: blur(40px);
+            border: 1px solid var(--border);
+            border-radius: 40px;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8);
+            position: relative;
+            overflow: hidden;
+            transition: 0.5s;
+        }
+
+        /* Neon Border Flow */
+        .vault-card::after {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            border-radius: 40px;
+            padding: 1px;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            pointer-events: none;
+        }
+
+        /* HEADER */
+        .header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .cyber-logo {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+            background: linear-gradient(135deg, #fff 30%, var(--primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 10px 30px rgba(244, 63, 94, 0.3);
+            transition: 0.5s;
+        }
+
+        .mode-badge {
+            font-size: 0.75rem;
+            font-weight: 700;
+            font-family: var(--mono);
+            padding: 4px 12px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            color: #94a3b8;
+            transition: 0.3s;
+        }
+
+        /* SWITCHER */
+        .switch-pills {
+            display: flex;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            padding: 5px;
+            border: 1px solid var(--border);
+        }
+
+        .pill {
+            flex: 1;
+            border: none;
+            background: transparent;
+            color: #64748b;
+            padding: 12px;
+            border-radius: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+
+        .pill.active {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .pill.active.lock {
+            color: var(--primary);
+        }
+
+        .pill.active.unlock {
+            color: var(--safe);
+        }
+
+        /* DROP AREA */
+        .cyber-drop {
+            height: 160px;
+            border-radius: 24px;
+            border: 2px dashed var(--border);
+            background: rgba(255, 255, 255, 0.01);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: 0.3s;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cyber-drop:hover {
+            background: rgba(255, 255, 255, 0.03);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .cyber-drop.active {
+            border-color: var(--primary);
+            background: rgba(244, 63, 94, 0.05);
+        }
+
+        .icon-glow {
+            filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.1));
+            transition: 0.3s;
+        }
+
+        .cyber-drop.has-file .icon-glow {
+            filter: drop-shadow(0 0 20px var(--accent));
+            color: var(--accent);
+        }
+
+        .file-chips {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            gap: 5px;
+            overflow-x: auto;
+        }
+
+        .chip {
+            background: #1e1e24;
+            border: 1px solid var(--border);
+            padding: 5px 10px;
+            border-radius: 8px;
+            font-size: 0.7rem;
+            color: white;
+            white-space: nowrap;
+        }
+
+        /* INPUT */
+        .cyber-input {
+            width: 100%;
+            padding: 18px 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            color: white;
+            font-family: var(--mono);
+            font-size: 1rem;
+            outline: none;
+            text-align: center;
+            transition: 0.3s;
+            letter-spacing: 3px;
+        }
+
+        .cyber-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 30px rgba(244, 63, 94, 0.15);
+        }
+
+        .cyber-input::placeholder {
+            letter-spacing: 0;
+            font-family: var(--font);
+            color: #475569;
+        }
+
+        /* BUTTON */
+        .cyber-btn {
+            width: 100%;
+            padding: 22px;
+            border-radius: 20px;
+            border: none;
+            font-size: 1.1rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: 0.3s;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        /* Lock Mode Color */
+        body[data-mode='lock'] .cyber-btn {
+            background: linear-gradient(135deg, #be123c, #f43f5e);
+            box-shadow: 0 10px 40px rgba(244, 63, 94, 0.4);
+        }
+
+        /* Unlock Mode Color */
+        body[data-mode='unlock'] .cyber-btn {
+            background: linear-gradient(135deg, #059669, #10b981);
+            box-shadow: 0 10px 40px rgba(16, 185, 129, 0.4);
+        }
+
+        .cyber-btn:active {
+            transform: scale(0.98);
+        }
+
+        .cyber-btn:disabled {
+            opacity: 0.7;
+            cursor: wait;
+            filter: grayscale(1);
+        }
+
+        /* PROGRESS OVERLAY */
+        #progressOverlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 50;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: 0.3s;
+        }
+
+        #progressOverlay.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .cyber-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s infinite linear;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .prog-text {
+            font-family: var(--mono);
+            font-size: 0.9rem;
+            color: var(--primary);
+        }
+    </style>
+</head>
+
+<body data-mode="lock">
+
+    <canvas id="cosmos"></canvas>
+
+    <div class="vault-card">
+        <!-- HEADER -->
+        <div class="header">
+            <div class="mode-badge" id="modeBadge">SECURE ENCLAVE</div>
+            <div class="cyber-logo" id="logoText">AURORA LOCK</div>
+        </div>
+
+        <!-- SWITCHER -->
+        <div class="switch-pills">
+            <button class="pill active lock" onclick="switchMode('lock')">
+                <i data-lucide="lock" width="16"></i> KİLİTLE
+            </button>
+            <button class="pill unlock" onclick="switchMode('unlock')">
+                <i data-lucide="unlock" width="16"></i> AÇ
+            </button>
+        </div>
+
+        <!-- FILES -->
+        <div class="cyber-drop" id="dropZone" onclick="document.getElementById('fileIn').click()">
+            <input type="file" id="fileIn" multiple style="display:none" onchange="handleFiles(this.files)">
+            <i data-lucide="shield" width="50" class="icon-glow" style="margin-bottom:15px; color:#475569;"></i>
+            <div style="font-size:1.1rem; font-weight:600; color:#e2e8f0; margin-bottom:5px;">Dosyaları Sürükle</div>
+            <div style="font-size:0.8rem; color:#64748b;">veya dokunarak seç</div>
+            <div class="file-chips" id="fileChips"></div>
+        </div>
+
+        <!-- AUTH -->
+        <input type="text" id="passKey" class="cyber-input" placeholder="ANAHTAR (ŞİFRE)" autocomplete="off">
+
+        <!-- ACTION -->
+        <button class="cyber-btn" onclick="execute()">
+            <span id="btnText">KİLİTLEME BAŞLAT</span> <i data-lucide="arrow-right"></i>
+        </button>
+
+        <!-- PROGRESS -->
+        <div id="progressOverlay">
+            <div class="cyber-spinner"></div>
+            <div class="prog-text" id="progText">ENCRYPTING...</div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // --- VISUALS (CANVAS) ---
+        const cvs = document.getElementById('cosmos');
+        const ctx = cvs.getContext('2d');
+        let w, h;
+        const particles = [];
+
+        function resize() { w = cvs.width = window.innerWidth; h = cvs.height = window.innerHeight; }
+        window.onresize = resize; resize();
+
+        class P {
+            constructor() { this.reset(); }
+            reset() {
+                this.x = Math.random() * w; this.y = Math.random() * h;
+                this.vx = (Math.random() - 0.5) * 0.5; this.vy = (Math.random() - 0.5) * 0.5;
+                this.s = Math.random() * 2;
+            }
+            update() {
+                this.x += this.vx; this.y += this.vy;
+                if (this.x < 0 || this.x > w || this.y < 0 || this.y > h) this.reset();
+            }
+            draw() {
+                ctx.fillStyle = document.body.getAttribute('data-mode') === 'lock' ? 'rgba(244,63,94,0.5)' : 'rgba(16,185,129,0.5)';
+                ctx.beginPath(); ctx.arc(this.x, this.y, this.s, 0, Math.PI * 2); ctx.fill();
+            }
+        }
+        for (let i = 0; i < 60; i++) particles.push(new P());
+
+        function anim() {
+            ctx.clearRect(0, 0, w, h);
+            particles.forEach(p => { p.update(); p.draw(); });
+            // Connect
+            ctx.strokeStyle = document.body.getAttribute('data-mode') === 'lock' ? 'rgba(244,63,94,0.1)' : 'rgba(16,185,129,0.1)';
+            for (let i = 0; i < particles.length; i++) {
+                for (let j = i + 1; j < particles.length; j++) {
+                    const dx = particles[i].x - particles[j].x; const dy = particles[i].y - particles[j].y;
+                    if (dx * dx + dy * dy < 15000) { ctx.beginPath(); ctx.moveTo(particles[i].x, particles[i].y); ctx.lineTo(particles[j].x, particles[j].y); ctx.stroke(); }
+                }
+            }
+            requestAnimationFrame(anim);
+        }
+        anim();
+
+        // --- APP LOGIC ---
+        let FILES = [];
+        let MODE = 'lock';
+        const HEADER = "AURORA_V1|";
+
+        function switchMode(m) {
+            MODE = m;
+            document.body.setAttribute('data-mode', m);
+            document.querySelectorAll('.pill').forEach(b => b.classList.remove('active'));
+            document.querySelector(`.pill.${m}`).classList.add('active');
+
+            const btn = document.getElementById('btnText');
+            btn.innerText = m === 'lock' ? 'KİLİTLEME BAŞLAT' : 'KİLİDİ AÇ';
+
+            const logo = document.querySelector('.cyber-logo');
+            logo.style.background = m === 'lock'
+                ? 'linear-gradient(135deg, #fff 30%, #f43f5e)'
+                : 'linear-gradient(135deg, #fff 30%, #10b981)';
+            logo.style.webkitBackgroundClip = 'text';
+
+            // Adjust Spinner Color
+            document.querySelector('.cyber-spinner').style.borderTopColor = m === 'lock' ? '#f43f5e' : '#10b981';
+            document.querySelector('.prog-text').style.color = m === 'lock' ? '#f43f5e' : '#10b981';
+        }
+
+        // DRAG DROP
+        const dz = document.getElementById('dropZone');
+        dz.ondragover = (e) => { e.preventDefault(); dz.classList.add('active'); };
+        dz.ondragleave = () => dz.classList.remove('active');
+        dz.ondrop = (e) => { e.preventDefault(); dz.classList.remove('active'); handleFiles(e.dataTransfer.files); };
+
+        function handleFiles(list) {
+            FILES = Array.from(list);
+            const chips = document.getElementById('fileChips');
+            chips.innerHTML = '';
+
+            if (FILES.length > 0) dz.classList.add('has-file');
+            else dz.classList.remove('has-file');
+
+            FILES.forEach(f => {
+                chips.innerHTML += `<div class="chip">${f.name}</div>`;
+            });
+        }
+
+        async function execute() {
+            const pass = document.getElementById('passKey').value;
+            if (!pass) return alert("Hata: Şifre Gerekli.");
+            if (FILES.length === 0) return alert("Hata: Dosya Yok.");
+
+            showProgress(true, MODE === 'lock' ? 'ENCRYPTING (3-LAYER)...' : 'DECRYPTING...');
+
+            // Delay to allow UI render
+            setTimeout(async () => {
+                try {
+                    for (const f of FILES) {
+                        if (MODE === 'lock') await lockFn(f, pass);
+                        else await unlockFn(f, pass);
+                    }
+                    showProgress(false);
+                } catch (e) {
+                    showProgress(false);
+                    alert("İşlem Başarısız: " + e.message);
+                }
+            }, 500);
+        }
+
+        function showProgress(show, txt) {
+            const el = document.getElementById('progressOverlay');
+            if (show) {
+                el.classList.add('active');
+                document.getElementById('progText').innerText = txt;
+            } else {
+                el.classList.remove('active');
+            }
+        }
+
+        // --- CRYPTO ENGINE ---
+        function readFile(f, asText = false) {
+            return new Promise((res, rej) => {
+                const r = new FileReader();
+                r.onload = () => res(r.result);
+                r.onerror = rej;
+                asText ? r.readAsText(f) : r.readAsDataURL(f);
+            });
+        }
+
+        async function lockFn(file, pass) {
+            const raw = await readFile(file); // raw base64
+
+            // L1: Scramble
+            const scrambled = raw.split('').reverse().join('');
+
+            // L2: AES
+            const encrypted = CryptoJS.AES.encrypt(scrambled, pass).toString();
+
+            // L3: Wrap
+            const payload = { n: file.name, d: encrypted };
+            const final = HEADER + btoa(JSON.stringify(payload));
+
+            saveFile(final, file.name + '.au', 'text/plain');
+        }
+
+        async function unlockFn(file, pass) {
+            if (!file.name.endsWith('.au')) throw new Error('Not an .au file');
+
+            const content = await readFile(file, true);
+            if (!content.startsWith(HEADER)) throw new Error('Invalid Header');
+
+            const b64 = content.replace(HEADER, '');
+            const json = atob(b64);
+            const payload = JSON.parse(json);
+
+            // L2: AES Decrypt
+            const scrambled = CryptoJS.AES.decrypt(payload.d, pass).toString(CryptoJS.enc.Utf8);
+            if (!scrambled) throw new Error('Wrong Password');
+
+            // L1: Unscramble
+            const originalData = scrambled.split('').reverse().join('');
+
+            // Save
+            const res = await fetch(originalData);
+            const blob = await res.blob();
+            saveBlob(blob, payload.n);
+        }
+
+        function saveFile(txt, name, type) {
+            const blob = new Blob([txt], { type: type });
+            saveBlob(blob, name);
+        }
+        function saveBlob(blob, name) {
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = name;
+            a.click();
+        }
+
+    </script>
+</body>
+
+</html>
